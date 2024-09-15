@@ -28,4 +28,6 @@ __pycache__/
 /src/parser/build/
 *.zip
 
-deps/
+/deps/
+yacc.tab.cpp
+yacc.tab.h
