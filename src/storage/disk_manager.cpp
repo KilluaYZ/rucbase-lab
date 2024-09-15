@@ -107,9 +107,9 @@ void DiskManager::create_file(const std::string &path) {
     // Todo:
     // 调用open()函数，使用O_CREAT模式
     // 注意不能重复创建相同文件
-    if(access(path.c_str(), F_OK) != -1) return;
+    if(access(path.c_str(), F_OK) != -1) throw FileExistsError("DiskManager::create_file file is existed");
     int fd = open(path.c_str(), O_CREAT | O_WRONLY, 0644);
-    if(fd == -1) throw InternalError("DiskManager::create_file Error fail to create file"); 
+    if(fd == -1) throw FileNotFoundError("DiskManager::create_file Error fail to create file"); 
     close(fd);
 }
 
@@ -122,7 +122,7 @@ void DiskManager::destroy_file(const std::string &path) {
     // 调用unlink()函数
     // 注意不能删除未关闭的文件
     if(path2fd_.find(path) != path2fd_.end()) return;
-    unlink(path.c_str());
+    if(unlink(path.c_str()) == -1) throw FileNotFoundError("DiskManager::destroy_file file not found");
 }
 
 
@@ -137,7 +137,7 @@ int DiskManager::open_file(const std::string &path) {
     // 注意不能重复打开相同文件，并且需要更新文件打开列表
     if(path2fd_.find(path) != path2fd_.end()) throw InternalError("DiskManager::open_file Error file already opened");
     int fd = open(path.c_str(), O_RDWR);
-    if(fd == -1) throw InternalError("DiskManager::open_file Error failed to open file");
+    if(fd == -1) throw FileNotFoundError("DiskManager::open_file Error failed to open file");
     path2fd_[path] = fd;
     fd2path_[fd] = path;
     return fd;

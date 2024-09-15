@@ -6,7 +6,7 @@ rm -r $ROOT_PATH/build
 mkdir $ROOT_PATH/build
 cd $ROOT_PATH/build
 cmake -DCMAKE_BUILD_TYPE=Debug ..
-make rmdb -j
+make -j
 
 # 编译client
 CLIENT_ROOT=$ROOT_PATH/rucbase_client

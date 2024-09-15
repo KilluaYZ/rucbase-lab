@@ -9,6 +9,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details. */
 
 #include "lru_replacer.h"
+#include <algorithm>
 
 LRUReplacer::LRUReplacer(size_t num_pages) { max_size_ = num_pages; }
 
@@ -23,11 +24,19 @@ bool LRUReplacer::victim(frame_id_t* frame_id) {
     // C++17 std::scoped_lock
     // 它能够避免死锁发生，其构造函数能够自动进行上锁操作，析构函数会对互斥量进行解锁操作，保证线程安全。
     std::scoped_lock lock{latch_};  //  如果编译报错可以替换成其他lock
-
+    
     // Todo:
     //  利用lru_replacer中的LRUlist_,LRUHash_实现LRU策略
     //  选择合适的frame指定为淘汰页面,赋值给*frame_id
-
+    auto it = LRUlist_.end();
+    if(it == LRUlist_.begin()) {
+        frame_id = nullptr;
+        return false;
+    }
+    it--;
+    *frame_id = *it;
+    LRUlist_.erase(it);
+    LRUhash_.erase(*frame_id);
     return true;
 }
 
@@ -40,6 +49,12 @@ void LRUReplacer::pin(frame_id_t frame_id) {
     // Todo:
     // 固定指定id的frame
     // 在数据结构中移除该frame
+    // 如果说count小于等于0，则说明列表中没有该frame_id
+    if(LRUhash_.count(frame_id) <= 0) return;
+
+    auto it = LRUhash_[frame_id];
+    LRUlist_.erase(it);
+    LRUhash_.erase(frame_id);
 }
 
 /**
@@ -50,6 +65,14 @@ void LRUReplacer::unpin(frame_id_t frame_id) {
     // Todo:
     //  支持并发锁
     //  选择一个frame取消固定
+    std::scoped_lock lock{latch_};
+    auto f_it = std::find(LRUlist_.begin(), LRUlist_.end(), frame_id);
+    // 如果列表中已经存在了，则不需要在unpin了
+    if(f_it != LRUlist_.end()) return;
+
+    LRUlist_.push_front(frame_id);
+    auto it = LRUlist_.begin();
+    LRUhash_[frame_id] = it;
 }
 
 /**
